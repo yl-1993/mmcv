@@ -1,11 +1,14 @@
 # Copyright (c) Open-MMLab. All rights reserved.
 from .config import Config, ConfigDict, DictAction
+from .env import TORCH_VERSION
 from .logging import get_logger, print_log
 from .misc import (check_prerequisites, concat_list, is_list_of, is_seq_of,
                    is_str, is_tuple_of, iter_cast, list_cast,
                    requires_executable, requires_package, slice_list,
                    tuple_cast)
-from .parrots_wrapper import (CUDA_HOME, SyncBatchNorm, _AdaptiveAvgPoolNd,
+from .parrots_wrapper import (CUDA_HOME, BuildExtension, CppExtension,
+                              CUDAExtension, DataLoader, PoolDataLoader,
+                              SyncBatchNorm, _AdaptiveAvgPoolNd,
                               _AdaptiveMaxPoolNd, _AvgPoolNd, _BatchNorm,
                               _ConvNd, _ConvTransposeMixin, _InstanceNorm,
                               _MaxPoolNd, get_build_config)
@@ -26,5 +29,7 @@ __all__ = [
     'Registry', 'build_from_cfg', 'Timer', 'TimerError', 'check_time',
     'CUDA_HOME', 'SyncBatchNorm', '_AdaptiveAvgPoolNd', '_AdaptiveMaxPoolNd',
     '_AvgPoolNd', '_BatchNorm', '_ConvNd', '_ConvTransposeMixin',
-    '_InstanceNorm', '_MaxPoolNd', 'get_build_config'
+    '_InstanceNorm', '_MaxPoolNd', 'get_build_config', 'BuildExtension',
+    'CppExtension', 'CUDAExtension', 'DataLoader', 'PoolDataLoader',
+    'TORCH_VERSION'
 ]

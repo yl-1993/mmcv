@@ -89,7 +89,7 @@ class ConvModule(nn.Module):
         self.with_activation = act_cfg is not None
         # if the conv layer is before a norm layer, bias is unnecessary.
         if bias == 'auto':
-            bias = False if self.with_norm else True
+            bias = not self.with_norm
         self.with_bias = bias
 
         if self.with_norm and self.with_bias:
@@ -139,7 +139,9 @@ class ConvModule(nn.Module):
         # build activation layer
         if self.with_activation:
             act_cfg_ = act_cfg.copy()
-            act_cfg_.setdefault('inplace', inplace)
+            # nn.Tanh has no 'inplace' argument
+            if act_cfg_['type'] not in ['Tanh', 'PReLU', 'Sigmoid']:
+                act_cfg_.setdefault('inplace', inplace)
             self.activate = build_activation_layer(act_cfg_)
 
         # Use msra init by default
@@ -150,14 +152,22 @@ class ConvModule(nn.Module):
         return getattr(self, self.norm_name)
 
     def init_weights(self):
-        if self.with_activation and self.act_cfg['type'] == 'LeakyReLU':
-            nonlinearity = 'leaky_relu'
-            a = self.act_cfg.get('negative_slope', 0.01)
-        else:
-            nonlinearity = 'relu'
-            a = 0
-
-        kaiming_init(self.conv, a=a, nonlinearity=nonlinearity)
+        # 1. It is mainly for customized conv layers with their own
+        #    initialization manners, and we do not want ConvModule to
+        #    overrides the initialization.
+        # 2. For customized conv layers without their own initialization
+        #    manners, they will be initialized by this method with default
+        #    `kaiming_init`.
+        # 3. For PyTorch's conv layers, they will be initialized anyway by
+        #    their own `reset_parameters` methods.
+        if not hasattr(self.conv, 'init_weights'):
+            if self.with_activation and self.act_cfg['type'] == 'LeakyReLU':
+                nonlinearity = 'leaky_relu'
+                a = self.act_cfg.get('negative_slope', 0.01)
+            else:
+                nonlinearity = 'relu'
+                a = 0
+            kaiming_init(self.conv, a=a, nonlinearity=nonlinearity)
         if self.with_norm:
             constant_init(self.norm, 1, bias=0)
 

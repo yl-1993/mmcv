@@ -4,7 +4,44 @@ import pytest
 import torch
 import torch.nn as nn
 
-from mmcv.cnn.bricks import ConvModule
+from mmcv.cnn.bricks import CONV_LAYERS, ConvModule
+
+
+@CONV_LAYERS.register_module()
+class ExampleConv(nn.Module):
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
+                 stride=1,
+                 padding=0,
+                 dilation=1,
+                 groups=1,
+                 bias=True,
+                 norm_cfg=None):
+        super(ExampleConv, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.groups = groups
+        self.bias = bias
+        self.norm_cfg = norm_cfg
+        self.output_padding = (0, 0, 0)
+        self.transposed = False
+
+        self.conv0 = nn.Conv2d(in_channels, out_channels, kernel_size)
+        self.init_weights()
+
+    def forward(self, x):
+        x = self.conv0(x)
+        return x
+
+    def init_weights(self):
+        nn.init.constant_(self.conv0.weight, 0)
 
 
 def test_conv_module():
@@ -53,6 +90,11 @@ def test_conv_module():
     output = conv(x)
     assert output.shape == (1, 8, 255, 255)
 
+    # conv with its own `init_weights` method
+    conv_module = ConvModule(
+        3, 8, 2, conv_cfg=dict(type='ExampleConv'), act_cfg=None)
+    assert torch.equal(conv_module.conv.conv0.weight, torch.zeros(8, 3, 2, 2))
+
     # with_spectral_norm=True
     conv = ConvModule(3, 8, 3, padding=1, with_spectral_norm=True)
     assert hasattr(conv.conv, 'weight_orig')
@@ -72,6 +114,24 @@ def test_conv_module():
     # leaky relu
     conv = ConvModule(3, 8, 3, padding=1, act_cfg=dict(type='LeakyReLU'))
     assert isinstance(conv.activate, nn.LeakyReLU)
+    output = conv(x)
+    assert output.shape == (1, 8, 256, 256)
+
+    # tanh
+    conv = ConvModule(3, 8, 3, padding=1, act_cfg=dict(type='Tanh'))
+    assert isinstance(conv.activate, nn.Tanh)
+    output = conv(x)
+    assert output.shape == (1, 8, 256, 256)
+
+    # Sigmoid
+    conv = ConvModule(3, 8, 3, padding=1, act_cfg=dict(type='Sigmoid'))
+    assert isinstance(conv.activate, nn.Sigmoid)
+    output = conv(x)
+    assert output.shape == (1, 8, 256, 256)
+
+    # PReLU
+    conv = ConvModule(3, 8, 3, padding=1, act_cfg=dict(type='PReLU'))
+    assert isinstance(conv.activate, nn.PReLU)
     output = conv(x)
     assert output.shape == (1, 8, 256, 256)
 
